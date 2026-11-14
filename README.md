@@ -1,5 +1,7 @@
 # HF Tasks Navigator
 
+![HF Tasks Navigator: Daniel's View with favourites and the Multimodal group](docs/screenshot.png)
+
 A single, self-contained HTML page (bookmark it) listing every Hugging Face Hub task, each with a **Models** and a
 **Datasets** button that land straight on the filtered lists instead of the [huggingface.co/tasks](https://huggingface.co/tasks)
 explainer pages:
