@@ -15,7 +15,7 @@ explainer pages:
   - **Hugging Face**: categories and order exactly as on [huggingface.co/tasks](https://huggingface.co/tasks), the
     source of truth for the classification. Tasks that appear only on /models (e.g. Text-to-Audio, Voice Activity
     Detection, Time Series Forecasting) are appended to their API category.
-  - **Daniel's View**: the same top-level categories with subgroups: Computer Vision → Image / Video / 3D & Spatial;
+  - **Daniel's View**: the same top-level categories with subgroups: Multimodal → Image (Image-Text-to-Text, -to-Image, -to-Video); Computer Vision → Image / Video / 3D & Spatial;
     NLP → Classification / Generation / Embeddings & Retrieval / Question Answering; Audio → Speech-to-Text (ASR, VAD) /
     Audio Generation (TTS, text-to-audio) / Audio Classification, with Audio-to-Audio at the top level.
     Defined in [`views/daniels-view.json`](views/daniels-view.json).

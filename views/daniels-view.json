@@ -1,27 +1,157 @@
 {
  "id": "daniel",
  "name": "Daniel's View",
- "description": "Hugging Face's categories with subgroups: Computer Vision split into Image / Video / 3D & Spatial, NLP and Audio broken down by job.",
+ "description": "Hugging Face's categories with subgroups: Multimodal gets an Image subgroup, Computer Vision splits into Image / Video / 3D & Spatial, NLP and Audio are broken down by job.",
  "groups": [
-  {"title": "Multimodal", "tasks": ["any-to-any", "audio-text-to-text", "document-question-answering", "visual-document-retrieval", "image-text-to-text", "image-text-to-image", "image-text-to-video", "video-text-to-text", "visual-question-answering"]},
-  {"title": "Natural Language Processing", "subgroups": [
-   {"title": "Classification", "tasks": ["text-classification", "token-classification", "zero-shot-classification"]},
-   {"title": "Generation", "tasks": ["text-generation", "summarization", "translation", "fill-mask", "table-to-text"]},
-   {"title": "Embeddings & Retrieval", "tasks": ["feature-extraction", "sentence-similarity", "text-ranking", "text-retrieval"]},
-   {"title": "Question Answering", "tasks": ["question-answering", "table-question-answering", "multiple-choice"]}
-  ]},
-  {"title": "Computer Vision", "subgroups": [
-   {"title": "Image", "tasks": ["image-classification", "image-feature-extraction", "image-segmentation", "image-to-image", "image-to-text", "mask-generation", "object-detection", "text-to-image", "unconditional-image-generation", "zero-shot-image-classification", "zero-shot-object-detection"]},
-   {"title": "Video", "tasks": ["image-to-video", "text-to-video", "video-classification", "video-to-video"]},
-   {"title": "3D & Spatial", "tasks": ["depth-estimation", "keypoint-detection", "image-to-3d", "text-to-3d"]}
-  ]},
-  {"title": "Audio", "tasks": ["audio-to-audio"], "subgroups": [
-   {"title": "Speech-to-Text", "tasks": ["automatic-speech-recognition", "voice-activity-detection"]},
-   {"title": "Audio Generation", "tasks": ["text-to-speech", "text-to-audio"]},
-   {"title": "Audio Classification", "tasks": ["audio-classification"]}
-  ]},
-  {"title": "Tabular", "tasks": ["tabular-classification", "tabular-regression", "time-series-forecasting", "tabular-to-text"]},
-  {"title": "Reinforcement Learning", "tasks": ["reinforcement-learning", "robotics"]},
-  {"title": "Other", "tasks": ["graph-ml"]}
+  {
+   "title": "Multimodal",
+   "tasks": [
+    "any-to-any",
+    "audio-text-to-text",
+    "document-question-answering",
+    "visual-document-retrieval",
+    "video-text-to-text",
+    "visual-question-answering"
+   ],
+   "subgroups": [
+    {
+     "title": "Image",
+     "tasks": [
+      "image-text-to-text",
+      "image-text-to-image",
+      "image-text-to-video"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Natural Language Processing",
+   "subgroups": [
+    {
+     "title": "Classification",
+     "tasks": [
+      "text-classification",
+      "token-classification",
+      "zero-shot-classification"
+     ]
+    },
+    {
+     "title": "Generation",
+     "tasks": [
+      "text-generation",
+      "summarization",
+      "translation",
+      "fill-mask",
+      "table-to-text"
+     ]
+    },
+    {
+     "title": "Embeddings & Retrieval",
+     "tasks": [
+      "feature-extraction",
+      "sentence-similarity",
+      "text-ranking",
+      "text-retrieval"
+     ]
+    },
+    {
+     "title": "Question Answering",
+     "tasks": [
+      "question-answering",
+      "table-question-answering",
+      "multiple-choice"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Computer Vision",
+   "subgroups": [
+    {
+     "title": "Image",
+     "tasks": [
+      "image-classification",
+      "image-feature-extraction",
+      "image-segmentation",
+      "image-to-image",
+      "image-to-text",
+      "mask-generation",
+      "object-detection",
+      "text-to-image",
+      "unconditional-image-generation",
+      "zero-shot-image-classification",
+      "zero-shot-object-detection"
+     ]
+    },
+    {
+     "title": "Video",
+     "tasks": [
+      "image-to-video",
+      "text-to-video",
+      "video-classification",
+      "video-to-video"
+     ]
+    },
+    {
+     "title": "3D & Spatial",
+     "tasks": [
+      "depth-estimation",
+      "keypoint-detection",
+      "image-to-3d",
+      "text-to-3d"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Audio",
+   "tasks": [
+    "audio-to-audio"
+   ],
+   "subgroups": [
+    {
+     "title": "Speech-to-Text",
+     "tasks": [
+      "automatic-speech-recognition",
+      "voice-activity-detection"
+     ]
+    },
+    {
+     "title": "Audio Generation",
+     "tasks": [
+      "text-to-speech",
+      "text-to-audio"
+     ]
+    },
+    {
+     "title": "Audio Classification",
+     "tasks": [
+      "audio-classification"
+     ]
+    }
+   ]
+  },
+  {
+   "title": "Tabular",
+   "tasks": [
+    "tabular-classification",
+    "tabular-regression",
+    "time-series-forecasting",
+    "tabular-to-text"
+   ]
+  },
+  {
+   "title": "Reinforcement Learning",
+   "tasks": [
+    "reinforcement-learning",
+    "robotics"
+   ]
+  },
+  {
+   "title": "Other",
+   "tasks": [
+    "graph-ml"
+   ]
+  }
  ]
 }
