@@ -30,6 +30,9 @@ explainer pages:
 - **Settings in localStorage, portable as JSON**: everything (view, sort, favourites, category order, collapsed
   groups) is stored per browser and per file location. **Export JSON** downloads `hf-tasks-navigator-settings.json`;
   **Import JSON** loads one on another device (replaces settings).
+- **Models** buttons are violet with a brain icon, **Datasets** buttons teal with a database icon; a dashed grey
+  button means no matching tag. Every link opens in a new tab.
+- Responsive: full toolbar on desktop, wrapped controls on tablet, single-column cards on phones.
 - Icons per task and category ([Lucide](https://lucide.dev), ISC), inlined as an SVG sprite.
 - Filter box (`/` to focus, `Esc` to clear), light/dark follows the system, quick links to Hugging Face, /models,
   /datasets, /spaces and /tasks.

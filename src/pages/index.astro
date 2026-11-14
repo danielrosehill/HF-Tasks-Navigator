@@ -8,10 +8,11 @@ const fmt = (n: number | null) =>
   n == null ? "" : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1).replace(/\.0$/, "")}k` : String(n);
 const count = Object.keys(tasks).length;
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const bi = (cls: string) => `<svg class="i bi"><use href="#i-${cls === "m" ? "brain" : "database"}"/></svg>`;
 const btn = (url: string | null, name: string, n: number | null, cls: string) =>
   url
-    ? `<a class="btn ${cls}" href="${esc(url)}">${name}${n ? ` <span class="n">${fmt(n)}</span>` : ""}</a>`
-    : `<span class="btn ${cls} off" title="No ${name.toLowerCase()} tag for this task on the Hub">${name} —</span>`;
+    ? `<a class="btn ${cls}" href="${esc(url)}" target="_blank" rel="noopener">${bi(cls)}<span>${name}</span>${n ? `<span class="n">${fmt(n)}</span>` : ""}</a>`
+    : `<span class="btn ${cls} off" title="No ${name.toLowerCase()} tag for this task on the Hub">${bi(cls)}<span>${name}</span><span class="n">—</span></span>`;
 function card(t: Task, order: number): string {
   const l = label(t);
   return `<div class="card" data-id="${t.id}" data-order="${order}" data-hfrank="${hfRank[t.id] ?? 999}" data-label="${esc(l.toLowerCase())}" data-models="${t.models_count ?? 0}" data-q="${esc((l + " " + t.id).toLowerCase())}">`
@@ -26,6 +27,7 @@ function card(t: Task, order: number): string {
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<base target="_blank" />
 <title>HF Tasks Navigator</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>" />
 </head>
@@ -183,7 +185,7 @@ function card(t: Task, order: number): string {
   $("#export").addEventListener("click", () => {
     const body = JSON.stringify(snapshot(), null, 2);
     const a = Object.assign(document.createElement("a"), {
-      href: URL.createObjectURL(new Blob([body], { type: "application/json" })), download: "hf-tasks-navigator-settings.json" });
+      href: URL.createObjectURL(new Blob([body], { type: "application/json" })), download: "hf-tasks-navigator-settings.json", target: "_self" });
     a.click(); URL.revokeObjectURL(a.href);
   });
   $("#import").addEventListener("click", () => $("#import-file").click());
@@ -293,8 +295,8 @@ function card(t: Task, order: number): string {
 </script>
 
 <style is:global>
-:root{--bg:#f6f7f9;--fg:#1f2328;--mut:#6b7280;--card:#fff;--line:#e5e7eb;--m:#2563eb;--d:#dc2626;--acc:#f59e0b;--hov:#f0f2f5}
-@media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#e6e6e6;--mut:#9aa0a6;--card:#161a22;--line:#272d39;--m:#60a5fa;--d:#f87171;--acc:#fbbf24;--hov:#1d222c}}
+:root{--bg:#f6f7f9;--fg:#1f2328;--mut:#6b7280;--card:#fff;--line:#e5e7eb;--m:#6d28d9;--d:#0f766e;--acc:#f59e0b;--hov:#f0f2f5}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#e6e6e6;--mut:#9aa0a6;--card:#161a22;--line:#272d39;--m:#a78bfa;--d:#2dd4bf;--acc:#fbbf24;--hov:#1d222c}}
 *{box-sizing:border-box}
 body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg)}
 a{color:inherit}
@@ -353,15 +355,38 @@ details:not([open])>summary .chev{transform:rotate(-90deg)}
 .starred .star .i{fill:var(--acc)}
 .star .i{width:16px;height:16px}
 .links{display:flex;gap:6px}
-.btn{flex:1;text-align:center;padding:5px 6px;border-radius:7px;text-decoration:none;font-size:13px;border:1px solid}
-.btn.m{color:var(--m);border-color:color-mix(in srgb,var(--m) 40%,transparent)}
-.btn.d{color:var(--d);border-color:color-mix(in srgb,var(--d) 40%,transparent)}
-.btn.m:hover{background:color-mix(in srgb,var(--m) 12%,transparent)}
-.btn.d:hover{background:color-mix(in srgb,var(--d) 12%,transparent)}
-.btn.off{color:var(--mut);border-color:var(--line);opacity:.55}
-.n{opacity:.7;font-size:11px}
+.btn{flex:1;min-width:0;display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 8px;border-radius:7px;text-decoration:none;font-size:13px;font-weight:550;border:1px solid transparent;white-space:nowrap;transition:background .12s,border-color .12s}
+.btn .bi{width:14px;height:14px}
+.btn.m{color:var(--m);background:color-mix(in srgb,var(--m) 9%,transparent);border-color:color-mix(in srgb,var(--m) 22%,transparent)}
+.btn.d{color:var(--d);background:color-mix(in srgb,var(--d) 9%,transparent);border-color:color-mix(in srgb,var(--d) 22%,transparent)}
+.btn.m:hover{background:color-mix(in srgb,var(--m) 18%,transparent);border-color:var(--m)}
+.btn.d:hover{background:color-mix(in srgb,var(--d) 18%,transparent);border-color:var(--d)}
+.btn.off{color:var(--mut);background:none;border-color:var(--line);border-style:dashed;opacity:.6;font-weight:400}
+.n{opacity:.75;font-size:11px;font-weight:400}
 .hide{display:none!important}
 footer{color:var(--mut);font-size:12px;padding:0 24px 28px;text-align:center;line-height:1.7}
+@media (max-width:860px){
+  .bar{padding:10px 14px;gap:10px}
+  nav.hf{margin-left:0;width:100%;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  nav.hf a{white-space:nowrap;padding:4px 8px}
+  #q{max-width:none;order:-1;flex-basis:100%}
+  .tools{margin-left:0;flex-wrap:wrap}
+  main{padding:4px 14px 24px}
+  .mv{opacity:1}
+}
+@media (max-width:520px){
+  header{position:static}
+  h1{font-size:17px}
+  .controls{gap:8px}
+  .seg{flex-basis:100%}.seg button{flex:1;padding:7px 8px;white-space:nowrap}
+  .sort{flex-basis:100%}.sort select{flex:1}
+  .tools{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}.tools button{white-space:nowrap;padding:7px 6px;font-size:12.5px}
+  .grid{grid-template-columns:1fr;gap:8px}
+  details.group>summary{padding:10px 11px}
+  .group>.grid{padding:0 10px 10px}
+  details.sub{margin:4px 10px 8px}
+  .btn{padding:8px 6px}
+}
 .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:9}
 </style>
 </body>
