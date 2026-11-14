@@ -29,7 +29,7 @@ export const GROUP_ICONS: Record<string, string> = {
   "Tabular": "table", "Reinforcement Learning": "gamepad-2", "Other": "shapes", "Not yet classified": "folder-tree",
 };
 
-export const UI_ICONS = ["star", "download", "upload", "chevron-down", "external-link"];
+export const UI_ICONS = ["star", "download", "upload", "chevron-down", "external-link", "arrow-up", "arrow-down"];
 
 const dir = join(dirname(createRequire(import.meta.url).resolve("lucide-static/package.json")), "icons");
 

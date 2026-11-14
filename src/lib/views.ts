@@ -53,4 +53,6 @@ function huggingFaceView(): View {
   });
 }
 
-export const views: View[] = [huggingFaceView(), finish(daniel)];
+// Daniel's View first: it is the default (DEFAULT_VIEW in index.astro). huggingFaceView() also fills hfRank.
+const hf = huggingFaceView();
+export const views: View[] = [finish(daniel), hf];

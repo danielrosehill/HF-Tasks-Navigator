@@ -12,18 +12,22 @@ explainer pages:
 ## Features
 
 - **Two view presets** (toggle at the top, remembered):
+  - **Daniel's View** is the default; see below.
   - **Hugging Face**: categories and order exactly as on [huggingface.co/tasks](https://huggingface.co/tasks), the
     source of truth for the classification. Tasks that appear only on /models (e.g. Text-to-Audio, Voice Activity
     Detection, Time Series Forecasting) are appended to their API category.
-  - **Daniel's View**: the same top-level categories with subgroups: Multimodal → Image (Image-Text-to-Text, -to-Image, -to-Video); Computer Vision → Image / Video / 3D & Spatial;
+  - **Daniel's View** (default): the same top-level categories with subgroups: Multimodal → Image (Image-Text-to-Text, -to-Image, -to-Video); Computer Vision → Image / Video / 3D & Spatial;
     NLP → Classification / Generation / Embeddings & Retrieval / Question Answering; Audio → Speech-to-Text (ASR, VAD) /
     Audio Generation (TTS, text-to-audio) / Audio Classification, with Audio-to-Audio at the top level.
     Defined in [`views/daniels-view.json`](views/daniels-view.json).
 - **Accordions** per group and subgroup; collapsed state is remembered. Expand/collapse all.
+- **Custom category order**: hover a category or subgroup header for ↑/↓ buttons; order is saved per view.
+  **Reset order** restores the current view's default.
 - **Sort** within each group: default order, A–Z, or most models first.
-- **Favourites**: star any task; favourites show in a section at the top. Stored in the browser's localStorage
-  (per browser, per file location). **Export** downloads `hf-tasks-navigator-favourites.json`; **Import** merges one
-  back in, so you can carry favourites between devices.
+- **Favourites**: click the ☆ on any task card; starred tasks show in a Favourites section at the top.
+- **Settings in localStorage, portable as JSON**: everything (view, sort, favourites, category order, collapsed
+  groups) is stored per browser and per file location. **Export JSON** downloads `hf-tasks-navigator-settings.json`;
+  **Import JSON** loads one on another device (replaces settings).
 - Icons per task and category ([Lucide](https://lucide.dev), ISC), inlined as an SVG sprite.
 - Filter box (`/` to focus, `Esc` to clear), light/dark follows the system, quick links to Hugging Face, /models,
   /datasets, /spaces and /tasks.
@@ -40,14 +44,25 @@ scripts/open.sh      # open it in the default browser (installs first if missing
 
 `hf-launch.html` is committed, so installing needs no Node.
 
-## Favourites file format
+## Settings file format
 
 ```json
-{ "app": "hf-tasks-navigator", "schema": 1, "exported": "2026-11-14T12:00:00.000Z",
-  "favourites": ["automatic-speech-recognition", "text-to-speech"] }
+{ "app": "hf-tasks-navigator", "schema": 2, "exported": "2026-11-14T12:00:00.000Z",
+  "settings": {
+    "view": "daniel",
+    "sort": "default",
+    "favourites": ["automatic-speech-recognition", "text-to-speech"],
+    "collapsed": ["daniel:Multimodal"],
+    "order": { "daniel": ["daniel:Audio", "daniel:Tabular"], "daniel:Audio": ["daniel:Audio:Speech-to-Text"] } } }
 ```
 
-Entries are Hub task ids (`pipeline_tag` values). Import also accepts a bare JSON array of ids.
+- `view`: `daniel` or `hf`. `sort`: `default`, `az` or `models`.
+- `favourites`: Hub task ids (`pipeline_tag` values).
+- `collapsed` / `order` keys: `<view>:<Category>[:<Subgroup>]`. `order` maps a parent (`<view>` for categories,
+  `<view>:<Category>` for subgroups) to its children in order; children not listed keep their default position after.
+- Import of a schema-2 file replaces all settings. A schema-1 file (`{"favourites": [...]}`) or a bare array of ids
+  only merges favourites.
+- localStorage keys: `hfnav.view`, `hfnav.sort`, `hfnav.favourites`, `hfnav.closed`, `hfnav.order`.
 
 ## Build
 

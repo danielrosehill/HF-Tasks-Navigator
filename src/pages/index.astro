@@ -60,8 +60,9 @@ function card(t: Task, order: number): string {
     <input id="q" type="search" placeholder="Filter tasks…  ( / )" autofocus />
     <div class="tools">
       <button type="button" id="toggle-all" title="Expand or collapse all groups">Collapse all</button>
-      <button type="button" id="export" title="Download favourites as JSON"><svg class="i s"><use href="#i-download" /></svg> Export</button>
-      <button type="button" id="import" title="Load favourites from a JSON file (merges)"><svg class="i s"><use href="#i-upload" /></svg> Import</button>
+      <button type="button" id="reset-order" title="Restore this view's default category order">Reset order</button>
+      <button type="button" id="export" title="Download your settings (favourites, view, sort, category order, collapsed groups) as JSON"><svg class="i s"><use href="#i-download" /></svg> Export JSON</button>
+      <button type="button" id="import" title="Load settings from an exported JSON file"><svg class="i s"><use href="#i-upload" /></svg> Import JSON</button>
       <input type="file" id="import-file" accept="application/json,.json" hidden />
     </div>
   </div>
@@ -80,11 +81,12 @@ function card(t: Task, order: number): string {
         {v.id === "hf" && <> Source of truth: <a href="https://huggingface.co/tasks">huggingface.co/tasks</a> (order fetched {hfOrderFetched}).</>}
       </p>
       {v.groups.map((g) => (
-        <details class="group" open data-key={`${v.id}:${g.title}`}>
+        <details class="group" open data-key={`${v.id}:${g.title}`} data-parent={v.id}>
           <summary>
             <svg class="i"><use href={`#i-${groupIcon(g.title)}`} /></svg>
             <span>{g.title}</span>
             <span class="cnt">{g.tasks.length + g.subgroups.reduce((a, s) => a + s.tasks.length, 0)}</span>
+            <span class="mv"><button type="button" data-mv="-1" title="Move up"><svg class="i"><use href="#i-arrow-up" /></svg></button><button type="button" data-mv="1" title="Move down"><svg class="i"><use href="#i-arrow-down" /></svg></button></span>
             <svg class="i chev"><use href="#i-chevron-down" /></svg>
           </summary>
           {g.tasks.length > 0 && (
@@ -93,8 +95,8 @@ function card(t: Task, order: number): string {
             </div>
           )}
           {g.subgroups.map((s) => (
-            <details class="sub" open data-key={`${v.id}:${g.title}:${s.title}`}>
-              <summary><span>{s.title}</span><span class="cnt">{s.tasks.length}</span><svg class="i chev"><use href="#i-chevron-down" /></svg></summary>
+            <details class="sub" open data-key={`${v.id}:${g.title}:${s.title}`} data-parent={`${v.id}:${g.title}`}>
+              <summary><span>{s.title}</span><span class="cnt">{s.tasks.length}</span><span class="mv"><button type="button" data-mv="-1" title="Move up"><svg class="i"><use href="#i-arrow-up" /></svg></button><button type="button" data-mv="1" title="Move down"><svg class="i"><use href="#i-arrow-down" /></svg></button></span><svg class="i chev"><use href="#i-chevron-down" /></svg></summary>
               <div class="grid" data-sortable>
                 {s.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i)} />)}
               </div>
@@ -115,7 +117,8 @@ function card(t: Task, order: number): string {
 
 <script is:inline>
 (() => {
-  const LS = { fav: "hfnav.favourites", view: "hfnav.view", sort: "hfnav.sort", closed: "hfnav.closed" };
+  const LS = { fav: "hfnav.favourites", view: "hfnav.view", sort: "hfnav.sort", closed: "hfnav.closed", order: "hfnav.order" };
+  const DEFAULT_VIEW = "daniel";
   const get = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
   const set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -125,7 +128,7 @@ function card(t: Task, order: number): string {
 
   // views
   function setView(id) {
-    if (!$(`.view[data-view="${id}"]`)) id = "hf";
+    if (!$(`.view[data-view="${id}"]`)) id = DEFAULT_VIEW;
     $$(".view").forEach((v) => (v.hidden = v.dataset.view !== id));
     $$(".seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === id));
     set(LS.view, id);
@@ -171,11 +174,16 @@ function card(t: Task, order: number): string {
     favs.has(id) ? favs.delete(id) : favs.add(id);
     renderFavs();
   });
+  // settings export / import (one JSON file: carry it between devices)
+  function snapshot() {
+    return { app: "hf-tasks-navigator", schema: 2, exported: new Date().toISOString(), settings: {
+      view: get(LS.view, DEFAULT_VIEW), sort: get(LS.sort, "default"), favourites: [...favs],
+      collapsed: get(LS.closed, []), order: get(LS.order, {}) } };
+  }
   $("#export").addEventListener("click", () => {
-    const body = JSON.stringify({ app: "hf-tasks-navigator", schema: 1, exported: new Date().toISOString(),
-      favourites: [...favs] }, null, 2);
+    const body = JSON.stringify(snapshot(), null, 2);
     const a = Object.assign(document.createElement("a"), {
-      href: URL.createObjectURL(new Blob([body], { type: "application/json" })), download: "hf-tasks-navigator-favourites.json" });
+      href: URL.createObjectURL(new Blob([body], { type: "application/json" })), download: "hf-tasks-navigator-settings.json" });
     a.click(); URL.revokeObjectURL(a.href);
   });
   $("#import").addEventListener("click", () => $("#import-file").click());
@@ -183,14 +191,60 @@ function card(t: Task, order: number): string {
     const f = e.target.files[0]; if (!f) return;
     try {
       const d = JSON.parse(await f.text());
-      const list = Array.isArray(d) ? d : d.favourites;
+      const st = d && d.settings;
+      if (st) {                                   // schema 2: full settings, replaces current
+        if (typeof st.view === "string") set(LS.view, st.view);
+        if (typeof st.sort === "string") set(LS.sort, st.sort);
+        if (Array.isArray(st.favourites)) set(LS.fav, st.favourites.filter((x) => typeof x === "string"));
+        if (Array.isArray(st.collapsed)) set(LS.closed, st.collapsed);
+        if (st.order && typeof st.order === "object") set(LS.order, st.order);
+        location.reload();
+        return;
+      }
+      const list = Array.isArray(d) ? d : d.favourites;   // schema 1 / bare array: merge favourites
       if (!Array.isArray(list)) throw 0;
       list.filter((x) => typeof x === "string").forEach((x) => favs.add(x));
       renderFavs();
       flash(`Imported ${list.length} favourites`);
-    } catch { flash("Not a favourites file"); }
+    } catch { flash("Not a settings file"); }
     e.target.value = "";
   });
+
+  // custom category order: per parent (view id for categories, "view:Category" for subgroups)
+  const siblings = (parent) => $$(`details[data-parent="${CSS.escape(parent)}"]`);
+  function applyOrder() {
+    const order = get(LS.order, {});
+    for (const [parent, keys] of Object.entries(order)) {
+      const els = siblings(parent);
+      if (!els.length) continue;
+      const rank = (d) => { const i = keys.indexOf(d.dataset.key); return i < 0 ? 1e6 + els.indexOf(d) : i; };
+      [...els].sort((a, b) => rank(a) - rank(b)).forEach((d) => d.parentNode.appendChild(d));
+    }
+  }
+  // remember the built-in order so "Reset order" can restore it without a reload
+  $$("details[data-parent]").forEach((d, i) => (d.dataset.def = i));
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-mv]");
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    const d = b.closest("details[data-parent]"), parent = d.dataset.parent;
+    const els = siblings(parent), i = els.indexOf(d), j = i + +b.dataset.mv;
+    if (j < 0 || j >= els.length) return;
+    const other = els[j];
+    +b.dataset.mv < 0 ? other.before(d) : other.after(d);
+    const order = get(LS.order, {});
+    order[parent] = siblings(parent).map((x) => x.dataset.key);
+    set(LS.order, order);
+  }, true);
+  $("#reset-order").addEventListener("click", () => {
+    const view = $(".view:not([hidden])").dataset.view, order = get(LS.order, {});
+    for (const k of Object.keys(order)) if (k === view || k.startsWith(view + ":")) delete order[k];
+    set(LS.order, order);
+    const els = $$(`.view[data-view="${view}"] details[data-parent]`);
+    els.sort((a, b) => a.dataset.def - b.dataset.def).forEach((d) => d.parentNode.appendChild(d));
+    flash("Default order restored");
+  });
+
   function flash(msg) {
     const t = Object.assign(document.createElement("div"), { className: "toast", textContent: msg });
     document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
@@ -232,7 +286,8 @@ function card(t: Task, order: number): string {
   });
 
   sortSel.value = get(LS.sort, "default");
-  setView(get(LS.view, "hf"));
+  applyOrder();
+  setView(get(LS.view, DEFAULT_VIEW));
   renderFavs();
 })();
 </script>
@@ -273,6 +328,12 @@ details.sub>summary{padding:6px 2px;font-weight:600;font-size:12.5px;text-transf
 summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;user-select:none}
 summary::-webkit-details-marker{display:none}
 .cnt{font-size:11px;font-weight:500;color:var(--mut);background:var(--hov);border-radius:99px;padding:0 7px}
+.mv{margin-left:auto;display:inline-flex;gap:2px;opacity:0;transition:opacity .12s}
+summary:hover .mv,summary:focus-within .mv{opacity:1}
+.mv button{border:1px solid var(--line);background:var(--card);color:var(--mut);border-radius:6px;padding:2px;cursor:pointer;display:inline-flex}
+.mv button:hover{color:var(--fg)}
+.mv .i{width:14px;height:14px}
+.mv+.chev{margin-left:6px}
 .chev{margin-left:auto;transition:transform .15s;color:var(--mut)}
 details:not([open])>summary .chev{transform:rotate(-90deg)}
 .group>.grid{padding:0 14px 12px}
