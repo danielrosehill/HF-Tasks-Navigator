@@ -55,4 +55,10 @@ function huggingFaceView(): View {
 
 // Daniel's View first: it is the default (DEFAULT_VIEW in index.astro). huggingFaceView() also fills hfRank.
 const hf = huggingFaceView();
-export const views: View[] = [finish(daniel), hf];
+const full = finish({
+  ...daniel,
+  id: "full",
+  name: "Full View",
+  description: "Daniel's View grouping, with every Hub sort order (trending, likes, downloads, newest, recently updated) for models and datasets. Star a sort link to save it as a favourite, e.g. \"Most downloaded Automatic Speech Recognition models\".",
+});
+export const views: View[] = [finish(daniel), full, hf];

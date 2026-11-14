@@ -13,8 +13,12 @@ explainer pages:
 
 ## Features
 
-- **Two view presets** (toggle at the top, remembered):
+- **Three views** (toggle at the top, remembered):
   - **Daniel's View** is the default; see below.
+  - **Full View**: Daniel's View grouping, but each task shows Models and Datasets rows with one link per Hub sort
+    order: Trending, Likes, Downloads, Newest, Updated (`&sort=trending|likes|downloads|created|modified`, all five
+    checked on /models and /datasets 2026-11-14; trending is the Hub default). Star any of those links to save it as a
+    favourite, e.g. "Most downloaded Automatic Speech Recognition models".
   - **Hugging Face**: categories and order exactly as on [huggingface.co/tasks](https://huggingface.co/tasks), the
     source of truth for the classification. Tasks that appear only on /models (e.g. Text-to-Audio, Voice Activity
     Detection, Time Series Forecasting) are appended to their API category.
@@ -26,7 +30,8 @@ explainer pages:
 - **Custom category order**: hover a category or subgroup header for ↑/↓ buttons; order is saved per view.
   **Reset order** restores the current view's default.
 - **Sort** within each group: default order, A–Z, or most models first.
-- **Favourites**: click the ☆ on any task card; starred tasks show in a Favourites section at the top.
+- **Favourites**: click the ☆ on any task card, or on a sort link in Full View; they show in a Favourites section at
+  the top (task cards, plus one "Open" card per saved sort link).
 - **Settings in localStorage, portable as JSON**: everything (view, sort, favourites, category order, collapsed
   groups) is stored per browser and per file location. **Export JSON** downloads `hf-tasks-navigator-settings.json`;
   **Import JSON** loads one on another device (replaces settings).
@@ -61,8 +66,9 @@ scripts/open.sh      # open it in the default browser (installs first if missing
     "order": { "daniel": ["daniel:Audio", "daniel:Tabular"], "daniel:Audio": ["daniel:Audio:Speech-to-Text"] } } }
 ```
 
-- `view`: `daniel` or `hf`. `sort`: `default`, `az` or `models`.
-- `favourites`: Hub task ids (`pipeline_tag` values).
+- `view`: `daniel`, `full` or `hf`. `sort`: `default`, `az` or `models`.
+- `favourites`: Hub task ids (`pipeline_tag` values), or saved sort links as `<task>@<models|datasets>:<sort>`, e.g.
+  `automatic-speech-recognition@models:downloads`.
 - `collapsed` / `order` keys: `<view>:<Category>[:<Subgroup>]`. `order` maps a parent (`<view>` for categories,
   `<view>:<Category>` for subgroups) to its children in order; children not listed keep their default position after.
 - Import of a schema-2 file replaces all settings. A schema-1 file (`{"favourites": [...]}`) or a bare array of ids

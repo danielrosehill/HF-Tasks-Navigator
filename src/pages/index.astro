@@ -13,7 +13,39 @@ const btn = (url: string | null, name: string, n: number | null, cls: string) =>
   url
     ? `<a class="btn ${cls}" href="${esc(url)}" target="_blank" rel="noopener">${bi(cls)}<span>${name}</span>${n ? `<span class="n">${fmt(n)}</span>` : ""}</a>`
     : `<span class="btn ${cls} off" title="No ${name.toLowerCase()} tag for this task on the Hub">${bi(cls)}<span>${name}</span><span class="n">—</span></span>`;
-function card(t: Task, order: number): string {
+// Hub list sort orders, verified 2026-11-14 on /models and /datasets (same values on both). trending is the Hub default.
+const SORTS: [string, string, string][] = [
+  ["trending", "Trending", "Trending"],
+  ["likes", "Likes", "Most liked"],
+  ["downloads", "Downloads", "Most downloaded"],
+  ["created", "Newest", "Newest"],
+  ["modified", "Updated", "Recently updated"],
+];
+const attrs = (t: Task, order: number, l: string) =>
+  `data-id="${t.id}" data-order="${order}" data-hfrank="${hfRank[t.id] ?? 999}" data-label="${esc(l.toLowerCase())}" data-models="${t.models_count ?? 0}" data-q="${esc((l + " " + t.id).toLowerCase())}"`;
+const head = (t: Task, l: string) =>
+  `<div class="t"><svg class="i ti"><use href="#i-${taskIcon(t.id)}"/></svg><span class="lbl" title="${esc(t.summary ?? "")}">${esc(l)}</span>`
+  + (t.page ? `<a class="about" href="${esc(t.page)}" title="Task explainer on huggingface.co/tasks">?</a>` : "")
+  + `<button type="button" class="star" title="Favourite this task"><svg class="i"><use href="#i-star"/></svg></button></div>`;
+function sortRow(t: Task, l: string, kind: "models" | "datasets"): string {
+  const cls = kind === "models" ? "m" : "d", name = kind === "models" ? "Models" : "Datasets";
+  const url = kind === "models" ? t.models_url : t.datasets_url, n = kind === "models" ? t.models_count : t.datasets_count;
+  const lab = `<span class="slab ${cls}">${bi(cls)}<span>${name}</span>${n ? `<span class="n">${fmt(n)}</span>` : ""}</span>`;
+  if (!url) return `<div class="srow off">${lab}<span class="none">No ${kind} tag on the Hub</span></div>`;
+  const chips = SORTS.map(([v, short, phrase]) => {
+    const href = `${url}&sort=${v}`, fav = `${t.id}@${kind}:${v}`;
+    return `<span class="chip ${cls}" data-fav="${fav}" data-href="${esc(href)}" data-flabel="${esc(`${phrase} ${l} ${kind}`)}" data-icon="${taskIcon(t.id)}" data-kind="${cls}">`
+      + `<a href="${esc(href)}" target="_blank" rel="noopener" title="${esc(`${phrase} ${l} ${kind}`)}">${short}</a>`
+      + `<button type="button" class="star sm" title="Favourite: ${esc(`${phrase} ${l} ${kind}`)}"><svg class="i"><use href="#i-star"/></svg></button></span>`;
+  }).join("");
+  return `<div class="srow">${lab}<div class="chips">${chips}</div></div>`;
+}
+function fullCard(t: Task, order: number): string {
+  const l = label(t);
+  return `<div class="card full" ${attrs(t, order, l)}>${head(t, l)}${sortRow(t, l, "models")}${sortRow(t, l, "datasets")}</div>`;
+}
+function card(t: Task, order: number, view = ""): string {
+  if (view === "full") return fullCard(t, order);
   const l = label(t);
   return `<div class="card" data-id="${t.id}" data-order="${order}" data-hfrank="${hfRank[t.id] ?? 999}" data-label="${esc(l.toLowerCase())}" data-models="${t.models_count ?? 0}" data-q="${esc((l + " " + t.id).toLowerCase())}">`
     + `<div class="t"><svg class="i ti"><use href="#i-${taskIcon(t.id)}"/></svg><span class="lbl" title="${esc(t.summary ?? "")}">${esc(l)}</span>`
@@ -93,14 +125,14 @@ function card(t: Task, order: number): string {
           </summary>
           {g.tasks.length > 0 && (
             <div class="grid" data-sortable>
-              {g.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i)} />)}
+              {g.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i, v.id)} />)}
             </div>
           )}
           {g.subgroups.map((s) => (
             <details class="sub" open data-key={`${v.id}:${g.title}:${s.title}`} data-parent={`${v.id}:${g.title}`}>
               <summary><span>{s.title}</span><span class="cnt">{s.tasks.length}</span><span class="mv"><button type="button" data-mv="-1" title="Move up"><svg class="i"><use href="#i-arrow-up" /></svg></button><button type="button" data-mv="1" title="Move down"><svg class="i"><use href="#i-arrow-down" /></svg></button></span><svg class="i chev"><use href="#i-chevron-down" /></svg></summary>
               <div class="grid" data-sortable>
-                {s.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i)} />)}
+                {s.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i, v.id)} />)}
               </div>
             </details>
           ))}
@@ -156,14 +188,31 @@ function card(t: Task, order: number): string {
   sortSel.addEventListener("change", sortAll);
 
   // favourites
+  function linkCard(chip, id) {
+    const d = chip.dataset, el = document.createElement("div");
+    el.className = "card favlink";
+    Object.assign(el.dataset, { id, order: 1e4, label: d.flabel.toLowerCase(), models: 0, q: d.flabel.toLowerCase() });
+    el.innerHTML = `<div class="t"><svg class="i ti"><use href="#i-${d.icon}"/></svg><span class="lbl"></span>`
+      + `<button type="button" class="star" title="Remove favourite"><svg class="i"><use href="#i-star"/></svg></button></div>`
+      + `<div class="links"><a class="btn ${d.kind}" target="_blank" rel="noopener"><svg class="i bi"><use href="#i-${d.kind === "m" ? "brain" : "database"}"/></svg><span>Open</span></a></div>`;
+    el.querySelector(".lbl").textContent = d.flabel;
+    el.querySelector("a.btn").href = d.href;
+    return el;
+  }
   function renderFavs() {
     favGrid.innerHTML = "";
-    const src = $('.view[data-view="hf"]');
+    const src = $('.view[data-view="hf"]'), full = $('.view[data-view="full"]');
     [...favs].forEach((id) => {
+      if (id.includes("@")) {
+        const chip = full && $(`.chip[data-fav="${CSS.escape(id)}"]`, full);
+        if (chip) favGrid.appendChild(linkCard(chip, id));
+        return;
+      }
       const c = $(`.card[data-id="${CSS.escape(id)}"]`, src);
       if (c) { const n = c.cloneNode(true); n.dataset.order = c.dataset.hfrank; favGrid.appendChild(n); }
     });
     $$(".card").forEach((c) => c.classList.toggle("starred", favs.has(c.dataset.id)));
+    $$(".chip").forEach((c) => c.classList.toggle("starred", favs.has(c.dataset.fav)));
     favBox.hidden = favs.size === 0;
     $(".cnt", favBox).textContent = favs.size;
     set(LS.fav, [...favs]);
@@ -172,7 +221,7 @@ function card(t: Task, order: number): string {
   document.addEventListener("click", (e) => {
     const b = e.target.closest(".star");
     if (!b) return;
-    const id = b.closest(".card").dataset.id;
+    const chip = b.closest(".chip"), id = chip ? chip.dataset.fav : b.closest(".card").dataset.id;
     favs.has(id) ? favs.delete(id) : favs.add(id);
     renderFavs();
   });
@@ -362,6 +411,29 @@ details:not([open])>summary .chev{transform:rotate(-90deg)}
 .btn.m:hover{background:color-mix(in srgb,var(--m) 18%,transparent);border-color:var(--m)}
 .btn.d:hover{background:color-mix(in srgb,var(--d) 18%,transparent);border-color:var(--d)}
 .btn.off{color:var(--mut);background:none;border-color:var(--line);border-style:dashed;opacity:.6;font-weight:400}
+.card.full{gap:8px}
+.view[data-view="full"] .grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,430px),1fr))}
+.srow{display:flex;flex-direction:column;gap:5px}
+.slab{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600}
+.slab.m{color:var(--m)}.slab.d{color:var(--d)}
+.slab .bi{width:13px;height:13px}
+.srow.off{flex-direction:row;align-items:center;gap:8px;opacity:.55}
+.srow.off .slab{color:var(--mut)}
+.none{font-size:12px;color:var(--mut)}
+.chips{display:flex;flex-wrap:wrap;gap:4px}
+.chip{display:inline-flex;align-items:center;border-radius:99px;font-size:12px;border:1px solid;overflow:hidden}
+.chip.m{color:var(--m);background:color-mix(in srgb,var(--m) 7%,transparent);border-color:color-mix(in srgb,var(--m) 22%,transparent)}
+.chip.d{color:var(--d);background:color-mix(in srgb,var(--d) 7%,transparent);border-color:color-mix(in srgb,var(--d) 22%,transparent)}
+.chip a{color:inherit;text-decoration:none;padding:3px 4px 3px 9px;white-space:nowrap}
+.chip a:hover{text-decoration:underline}
+.chip.m:hover{background:color-mix(in srgb,var(--m) 15%,transparent)}
+.chip.d:hover{background:color-mix(in srgb,var(--d) 15%,transparent)}
+.star.sm{padding:3px 7px 3px 2px;opacity:.35}
+.star.sm .i{width:12px;height:12px}
+.chip:hover .star.sm{opacity:.8}
+.chip.starred .star.sm{opacity:1;color:var(--acc)}
+.chip.starred .star.sm .i{fill:var(--acc)}
+.favlink .lbl{font-weight:600}
 .n{opacity:.75;font-size:11px;font-weight:400}
 .hide{display:none!important}
 footer{color:var(--mut);font-size:12px;padding:0 24px 28px;text-align:center;line-height:1.7}
@@ -381,7 +453,8 @@ footer{color:var(--mut);font-size:12px;padding:0 24px 28px;text-align:center;lin
   .seg{flex-basis:100%}.seg button{flex:1;padding:7px 8px;white-space:nowrap}
   .sort{flex-basis:100%}.sort select{flex:1}
   .tools{width:100%;display:grid;grid-template-columns:1fr 1fr;gap:6px}.tools button{white-space:nowrap;padding:7px 6px;font-size:12.5px}
-  .grid{grid-template-columns:1fr;gap:8px}
+  .grid,.view[data-view="full"] .grid{grid-template-columns:1fr;gap:8px}
+  .chip a{padding:6px 4px 6px 10px}.star.sm{padding:6px 9px 6px 3px;opacity:.6}
   details.group>summary{padding:10px 11px}
   .group>.grid{padding:0 10px 10px}
   details.sub{margin:4px 10px 8px}
