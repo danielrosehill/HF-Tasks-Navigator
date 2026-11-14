@@ -1,0 +1,14 @@
+{
+  "name": "hf-tasks-navigator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build && cp dist/index.html hf-launch.html",
+    "refresh": "uv run scripts/refresh-data.py"
+  },
+  "dependencies": {
+    "astro": "^7.4.12",
+    "lucide-static": "^1.73.0"
+  }
+}

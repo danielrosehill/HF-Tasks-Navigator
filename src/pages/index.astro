@@ -1,0 +1,307 @@
+---
+import { views, tasks, generated, hfOrderFetched, hfRank, type Task } from "../lib/views";
+import { sprite, taskIcon, groupIcon, UI_ICONS, TASK_ICONS, GROUP_ICONS } from "../lib/icons";
+
+const icons = sprite([...Object.values(TASK_ICONS), ...Object.values(GROUP_ICONS), ...UI_ICONS, "shapes"]);
+const label = (t: Task) => (t.label === t.id ? t.id.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : t.label);
+const fmt = (n: number | null) =>
+  n == null ? "" : n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${(n / 1e3).toFixed(1).replace(/\.0$/, "")}k` : String(n);
+const count = Object.keys(tasks).length;
+const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const btn = (url: string | null, name: string, n: number | null, cls: string) =>
+  url
+    ? `<a class="btn ${cls}" href="${esc(url)}">${name}${n ? ` <span class="n">${fmt(n)}</span>` : ""}</a>`
+    : `<span class="btn ${cls} off" title="No ${name.toLowerCase()} tag for this task on the Hub">${name} —</span>`;
+function card(t: Task, order: number): string {
+  const l = label(t);
+  return `<div class="card" data-id="${t.id}" data-order="${order}" data-hfrank="${hfRank[t.id] ?? 999}" data-label="${esc(l.toLowerCase())}" data-models="${t.models_count ?? 0}" data-q="${esc((l + " " + t.id).toLowerCase())}">`
+    + `<div class="t"><svg class="i ti"><use href="#i-${taskIcon(t.id)}"/></svg><span class="lbl" title="${esc(t.summary ?? "")}">${esc(l)}</span>`
+    + (t.page ? `<a class="about" href="${esc(t.page)}" title="Task explainer on huggingface.co/tasks">?</a>` : "")
+    + `<button type="button" class="star" title="Favourite"><svg class="i"><use href="#i-star"/></svg></button></div>`
+    + `<div class="links">${btn(t.models_url, "Models", t.models_count, "m")}${btn(t.datasets_url, "Datasets", t.datasets_count, "d")}</div></div>`;
+}
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>HF Tasks Navigator</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>" />
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs set:html={icons} /></svg>
+
+<header>
+  <div class="bar">
+    <div class="brand">
+      <h1>🧭 HF Tasks Navigator</h1>
+      <span class="disc">Not affiliated with Hugging Face</span>
+    </div>
+    <nav class="hf">
+      <a href="https://huggingface.co">Hugging Face <svg class="i s"><use href="#i-external-link" /></svg></a>
+      <a href="https://huggingface.co/models">Models</a>
+      <a href="https://huggingface.co/datasets">Datasets</a>
+      <a href="https://huggingface.co/spaces">Spaces</a>
+      <a href="https://huggingface.co/tasks" title="Source of truth for the Hugging Face task classification">Tasks</a>
+    </nav>
+  </div>
+  <div class="bar controls">
+    <div class="seg" role="tablist" aria-label="View">
+      {views.map((v) => <button type="button" data-view={v.id} title={v.description}>{v.name}</button>)}
+    </div>
+    <label class="sort">Sort
+      <select id="sort">
+        <option value="default">Default order</option>
+        <option value="az">A–Z</option>
+        <option value="models">Most models</option>
+      </select>
+    </label>
+    <input id="q" type="search" placeholder="Filter tasks…  ( / )" autofocus />
+    <div class="tools">
+      <button type="button" id="toggle-all" title="Expand or collapse all groups">Collapse all</button>
+      <button type="button" id="export" title="Download favourites as JSON"><svg class="i s"><use href="#i-download" /></svg> Export</button>
+      <button type="button" id="import" title="Load favourites from a JSON file (merges)"><svg class="i s"><use href="#i-upload" /></svg> Import</button>
+      <input type="file" id="import-file" accept="application/json,.json" hidden />
+    </div>
+  </div>
+</header>
+
+<main>
+  <details class="group fav" id="favs" open hidden>
+    <summary><svg class="i"><use href="#i-star" /></svg><span>Favourites</span><span class="cnt"></span><svg class="i chev"><use href="#i-chevron-down" /></svg></summary>
+    <div class="grid" data-sortable></div>
+  </details>
+
+  {views.map((v) => (
+    <div class="view" data-view={v.id} hidden>
+      <p class="vdesc">
+        {v.description}
+        {v.id === "hf" && <> Source of truth: <a href="https://huggingface.co/tasks">huggingface.co/tasks</a> (order fetched {hfOrderFetched}).</>}
+      </p>
+      {v.groups.map((g) => (
+        <details class="group" open data-key={`${v.id}:${g.title}`}>
+          <summary>
+            <svg class="i"><use href={`#i-${groupIcon(g.title)}`} /></svg>
+            <span>{g.title}</span>
+            <span class="cnt">{g.tasks.length + g.subgroups.reduce((a, s) => a + s.tasks.length, 0)}</span>
+            <svg class="i chev"><use href="#i-chevron-down" /></svg>
+          </summary>
+          {g.tasks.length > 0 && (
+            <div class="grid" data-sortable>
+              {g.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i)} />)}
+            </div>
+          )}
+          {g.subgroups.map((s) => (
+            <details class="sub" open data-key={`${v.id}:${g.title}:${s.title}`}>
+              <summary><span>{s.title}</span><span class="cnt">{s.tasks.length}</span><svg class="i chev"><use href="#i-chevron-down" /></svg></summary>
+              <div class="grid" data-sortable>
+                {s.tasks.map((id, i) => <Fragment set:html={card(tasks[id], i)} />)}
+              </div>
+            </details>
+          ))}
+        </details>
+      ))}
+    </div>
+  ))}
+</main>
+
+<footer>
+  {count} tasks · counts as of {generated} · data: <a href="https://github.com/danielrosehill/HF-URLs">HF-URLs</a> ·
+  classification: <a href="https://huggingface.co/tasks">huggingface.co/tasks</a> ·
+  <a href="https://github.com/danielrosehill/HF-Tasks-Navigator">source</a> · icons: <a href="https://lucide.dev">Lucide</a> (ISC)<br />
+  Unofficial tool. Not affiliated with or endorsed by Hugging Face. Favourites are stored in this browser only; use Export / Import to move them between devices.
+</footer>
+
+<script is:inline>
+(() => {
+  const LS = { fav: "hfnav.favourites", view: "hfnav.view", sort: "hfnav.sort", closed: "hfnav.closed" };
+  const get = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+  const set = (k, v) => localStorage.setItem(k, JSON.stringify(v));
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  let favs = new Set(get(LS.fav, []));
+  const q = $("#q"), sortSel = $("#sort"), favBox = $("#favs"), favGrid = $("#favs .grid");
+
+  // views
+  function setView(id) {
+    if (!$(`.view[data-view="${id}"]`)) id = "hf";
+    $$(".view").forEach((v) => (v.hidden = v.dataset.view !== id));
+    $$(".seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.view === id));
+    set(LS.view, id);
+    filter();
+  }
+  $$(".seg button").forEach((b) => b.addEventListener("click", () => setView(b.dataset.view)));
+
+  // sorting
+  const keyFns = {
+    default: (c) => +c.dataset.order,
+    az: (c) => c.dataset.label,
+    models: (c) => -(+c.dataset.models || 0),
+  };
+  function sortAll() {
+    const k = sortSel.value, f = keyFns[k] || keyFns.default;
+    $$("[data-sortable]").forEach((g) => {
+      const cards = $$(":scope > .card", g);
+      cards.sort((a, b) => { const x = f(a), y = f(b); return x < y ? -1 : x > y ? 1 : 0; });
+      cards.forEach((c) => g.appendChild(c));
+    });
+    set(LS.sort, k);
+  }
+  sortSel.addEventListener("change", sortAll);
+
+  // favourites
+  function renderFavs() {
+    favGrid.innerHTML = "";
+    const src = $('.view[data-view="hf"]');
+    [...favs].forEach((id) => {
+      const c = $(`.card[data-id="${CSS.escape(id)}"]`, src);
+      if (c) { const n = c.cloneNode(true); n.dataset.order = c.dataset.hfrank; favGrid.appendChild(n); }
+    });
+    $$(".card").forEach((c) => c.classList.toggle("starred", favs.has(c.dataset.id)));
+    favBox.hidden = favs.size === 0;
+    $(".cnt", favBox).textContent = favs.size;
+    set(LS.fav, [...favs]);
+    sortAll(); filter();
+  }
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest(".star");
+    if (!b) return;
+    const id = b.closest(".card").dataset.id;
+    favs.has(id) ? favs.delete(id) : favs.add(id);
+    renderFavs();
+  });
+  $("#export").addEventListener("click", () => {
+    const body = JSON.stringify({ app: "hf-tasks-navigator", schema: 1, exported: new Date().toISOString(),
+      favourites: [...favs] }, null, 2);
+    const a = Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(new Blob([body], { type: "application/json" })), download: "hf-tasks-navigator-favourites.json" });
+    a.click(); URL.revokeObjectURL(a.href);
+  });
+  $("#import").addEventListener("click", () => $("#import-file").click());
+  $("#import-file").addEventListener("change", async (e) => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      const list = Array.isArray(d) ? d : d.favourites;
+      if (!Array.isArray(list)) throw 0;
+      list.filter((x) => typeof x === "string").forEach((x) => favs.add(x));
+      renderFavs();
+      flash(`Imported ${list.length} favourites`);
+    } catch { flash("Not a favourites file"); }
+    e.target.value = "";
+  });
+  function flash(msg) {
+    const t = Object.assign(document.createElement("div"), { className: "toast", textContent: msg });
+    document.body.appendChild(t); setTimeout(() => t.remove(), 2200);
+  }
+
+  // accordions: remember closed groups
+  const closed = new Set(get(LS.closed, []));
+  $$("details[data-key]").forEach((d) => {
+    if (closed.has(d.dataset.key)) d.open = false;
+    d.addEventListener("toggle", () => {
+      if (q.value) return;
+      d.open ? closed.delete(d.dataset.key) : closed.add(d.dataset.key);
+      set(LS.closed, [...closed]); syncToggle();
+    });
+  });
+  const toggleBtn = $("#toggle-all");
+  const visibleDetails = () => $$(".view:not([hidden]) details, #favs");
+  function syncToggle() { toggleBtn.textContent = visibleDetails().some((d) => d.open) ? "Collapse all" : "Expand all"; }
+  toggleBtn.addEventListener("click", () => {
+    const open = !visibleDetails().some((d) => d.open);
+    visibleDetails().forEach((d) => (d.open = open));
+  });
+
+  // filter
+  function filter() {
+    const v = q.value.trim().toLowerCase();
+    $$(".card").forEach((c) => c.classList.toggle("hide", !!v && !c.dataset.q.includes(v)));
+    $$(".view:not([hidden]) details, #favs").forEach((d) => {
+      const any = $$(".card:not(.hide)", d).length > 0;
+      d.classList.toggle("hide", !any);
+      if (v && any) d.open = true;
+    });
+    syncToggle();
+  }
+  q.addEventListener("input", filter);
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "/" && document.activeElement !== q) { e.preventDefault(); q.focus(); }
+    if (e.key === "Escape") { q.value = ""; filter(); }
+  });
+
+  sortSel.value = get(LS.sort, "default");
+  setView(get(LS.view, "hf"));
+  renderFavs();
+})();
+</script>
+
+<style is:global>
+:root{--bg:#f6f7f9;--fg:#1f2328;--mut:#6b7280;--card:#fff;--line:#e5e7eb;--m:#2563eb;--d:#dc2626;--acc:#f59e0b;--hov:#f0f2f5}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1015;--fg:#e6e6e6;--mut:#9aa0a6;--card:#161a22;--line:#272d39;--m:#60a5fa;--d:#f87171;--acc:#fbbf24;--hov:#1d222c}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+a{color:inherit}
+.i{width:18px;height:18px;flex:none;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.i.s{width:13px;height:13px;vertical-align:-2px}
+header{position:sticky;top:0;z-index:5;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.bar{max-width:1400px;margin:0 auto;padding:10px 24px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+.bar.controls{padding-top:0}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+h1{font-size:19px;margin:0}
+.disc{font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:99px;padding:1px 8px}
+nav.hf{margin-left:auto;display:flex;gap:4px;flex-wrap:wrap}
+nav.hf a{text-decoration:none;color:var(--mut);padding:5px 10px;border-radius:7px}
+nav.hf a:hover{background:var(--hov);color:var(--fg)}
+nav.hf a:first-child{color:var(--fg);font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--card)}
+.seg button{border:0;background:none;color:var(--mut);padding:6px 12px;font:inherit;cursor:pointer}
+.seg button[aria-selected="true"]{background:var(--fg);color:var(--bg)}
+.sort{color:var(--mut);display:flex;gap:6px;align-items:center}
+select,#q,.tools button{font:inherit;color:var(--fg);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+#q{flex:1;min-width:180px;max-width:340px}
+.tools{display:flex;gap:6px;margin-left:auto}
+.tools button{cursor:pointer;color:var(--mut)}
+.tools button:hover{color:var(--fg);background:var(--hov)}
+main{max-width:1400px;margin:0 auto;padding:6px 24px 32px}
+.vdesc{color:var(--mut);font-size:12.5px;margin:12px 0 4px}
+details.group{margin:14px 0;border:1px solid var(--line);border-radius:12px;background:color-mix(in srgb,var(--card) 50%,transparent)}
+details.group>summary{padding:11px 14px;font-weight:650;font-size:15px}
+details.sub{margin:4px 14px 10px}
+details.sub>summary{padding:6px 2px;font-weight:600;font-size:12.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--mut);border-bottom:1px dashed var(--line);margin-bottom:8px}
+summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:9px;user-select:none}
+summary::-webkit-details-marker{display:none}
+.cnt{font-size:11px;font-weight:500;color:var(--mut);background:var(--hov);border-radius:99px;padding:0 7px}
+.chev{margin-left:auto;transition:transform .15s;color:var(--mut)}
+details:not([open])>summary .chev{transform:rotate(-90deg)}
+.group>.grid{padding:0 14px 12px}
+.sub>.grid{padding:0 0 4px}
+.fav{border-color:color-mix(in srgb,var(--acc) 45%,var(--line))}
+.fav>summary>.i:first-child{color:var(--acc);fill:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:9px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 11px;display:flex;flex-direction:column;gap:9px;transition:border-color .12s,box-shadow .12s}
+.card:hover{border-color:color-mix(in srgb,var(--fg) 25%,var(--line));box-shadow:0 2px 8px rgb(0 0 0/.05)}
+.t{display:flex;align-items:center;gap:8px;font-weight:600}
+.t .ti{color:var(--mut);background:var(--hov);border-radius:7px;padding:5px;width:28px;height:28px}
+.t .lbl{flex:1;min-width:0}
+.star,.about{border:0;background:none;padding:2px;color:var(--mut);cursor:pointer;display:inline-flex;text-decoration:none;opacity:.55}
+.star:hover,.about:hover{opacity:1;color:var(--fg)}
+.about{font-size:11px;font-weight:500;border:1px solid var(--line);border-radius:50%;width:18px;height:18px;align-items:center;justify-content:center;padding:0}
+.starred .star{opacity:1;color:var(--acc)}
+.starred .star .i{fill:var(--acc)}
+.star .i{width:16px;height:16px}
+.links{display:flex;gap:6px}
+.btn{flex:1;text-align:center;padding:5px 6px;border-radius:7px;text-decoration:none;font-size:13px;border:1px solid}
+.btn.m{color:var(--m);border-color:color-mix(in srgb,var(--m) 40%,transparent)}
+.btn.d{color:var(--d);border-color:color-mix(in srgb,var(--d) 40%,transparent)}
+.btn.m:hover{background:color-mix(in srgb,var(--m) 12%,transparent)}
+.btn.d:hover{background:color-mix(in srgb,var(--d) 12%,transparent)}
+.btn.off{color:var(--mut);border-color:var(--line);opacity:.55}
+.n{opacity:.7;font-size:11px}
+.hide{display:none!important}
+footer{color:var(--mut);font-size:12px;padding:0 24px 28px;text-align:center;line-height:1.7}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:9}
+</style>
+</body>
+</html>
